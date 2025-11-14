@@ -1,0 +1,65 @@
+[
+  {
+    "id": "1",
+    "name": "Java",
+    "slug": "java",
+    "description": "Learn Java programming from basics to advanced concepts including OOP, data structures, and frameworks",
+    "tutorialCount": 25,
+    "icon": "☕",
+    "color": "#f89820"
+  },
+  {
+    "id": "2",
+    "name": "Python",
+    "slug": "python",
+    "description": "Master Python programming for web development, data science, AI, and automation",
+    "tutorialCount": 30,
+    "icon": "🐍",
+    "color": "#3776ab"
+  },
+  {
+    "id": "3",
+    "name": "JavaScript",
+    "slug": "javascript",
+    "description": "Modern JavaScript for web development, Node.js, and full-stack applications",
+    "tutorialCount": 35,
+    "icon": "⚡",
+    "color": "#f7df1e"
+  },
+  {
+    "id": "4",
+    "name": "React",
+    "slug": "react",
+    "description": "Build modern user interfaces with React, hooks, and the latest best practices",
+    "tutorialCount": 20,
+    "icon": "⚛️",
+    "color": "#61dafb"
+  },
+  {
+    "id": "5",
+    "name": "TypeScript",
+    "slug": "typescript",
+    "description": "Add type safety to JavaScript with TypeScript for better development experience",
+    "tutorialCount": 15,
+    "icon": "📘",
+    "color": "#3178c6"
+  },
+  {
+    "id": "6",
+    "name": "Google Cloud Platform",
+    "slug": "gcp",
+    "description": "Master Google Cloud services including Compute Engine, Cloud Storage, BigQuery, Kubernetes, and more",
+    "tutorialCount": 35,
+    "icon": "☁️",
+    "color": "#4285f4"
+  },
+  {
+    "id": "7",
+    "name": "Node.js",
+    "slug": "nodejs",
+    "description": "Server-side JavaScript development with Node.js, Express, and backend technologies",
+    "tutorialCount": 18,
+    "icon": "🟢",
+    "color": "#339933"
+  }
+]
