@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GetStaticProps, GetStaticPaths } from 'next';
 import Layout from '../../../components/Layout';
 import Link from 'next/link';
-import { Clock, User, Calendar, Menu, X, BookOpen } from 'lucide-react';
+import { Clock, User, Calendar, Menu, X, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TutorialPageProps {
   tutorial: {
@@ -28,6 +28,53 @@ interface TutorialPageProps {
 
 const TutorialPage: React.FC<TutorialPageProps> = ({ tutorial, allTutorials }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [slides, setSlides] = useState<string[]>([]);
+  
+  // Check if this is a practice exam page
+  const isPracticeExam = tutorial.slug.includes('practice-exam') || tutorial.slug.includes('practice-exams-tests');
+
+  // Split content into slides for practice exams
+  useEffect(() => {
+    if (isPracticeExam && tutorial.content) {
+      // Split by Question headers (h3 tags with "Question")
+      const questionRegex = /<h3>Question \d+:/g;
+      const parts = tutorial.content.split(questionRegex);
+      
+      // First part is the introduction
+      const intro = parts[0];
+      
+      // Get all question headers
+      const headers = tutorial.content.match(questionRegex) || [];
+      
+      // Combine headers with their content
+      const questionSlides = headers.map((header, index) => {
+        return header + (parts[index + 1] || '');
+      });
+      
+      // Add intro as first slide, then all questions
+      setSlides([intro, ...questionSlides]);
+    }
+  }, [tutorial.content, isPracticeExam]);
+
+  const nextSlide = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const prevSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -70,6 +117,31 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ tutorial, allTutorials }) =
           </div>
           
           <div className="sidebar-content">
+            {/* Practice Exams Section */}
+            <div className="sidebar-group">
+              <h4 className="sidebar-group-title" style={{ color: '#2196f3', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
+                🎯 Practice Exams (1)
+              </h4>
+              <ul className="sidebar-list">
+                <li className="sidebar-item">
+                  <Link
+                    href="/tutorials/gcp/gcp-adp-practice-exam"
+                    className="sidebar-link"
+                    onClick={() => setSidebarOpen(false)}
+                    style={{ 
+                      backgroundColor: '#e3f2fd',
+                      fontWeight: '600',
+                      borderLeft: '3px solid #2196f3'
+                    }}
+                  >
+                    <span className="sidebar-link-text">GCP ADP Practice Exam (24 Questions)</span>
+                    <span className="difficulty-indicator" style={{ backgroundColor: '#2196f3' }}></span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Regular Tutorials by Difficulty */}
             {Object.entries(groupedTutorials).map(([difficulty, tutorials]) => (
               <div key={difficulty} className="sidebar-group">
                 <h4 className={`sidebar-group-title ${getDifficultyColor(difficulty)}`}>
@@ -124,9 +196,180 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ tutorial, allTutorials }) =
               </div>
             </header>
             
-            <div className="tutorial-content">
-              <div dangerouslySetInnerHTML={{ __html: tutorial.content }} />
-            </div>
+            {isPracticeExam && slides.length > 0 ? (
+              <>
+                {/* Slide Navigation Controls */}
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  padding: '15px 20px',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '15px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      onClick={prevSlide}
+                      disabled={currentSlide === 0}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: currentSlide === 0 ? '#e9ecef' : '#007bff',
+                        color: currentSlide === 0 ? '#6c757d' : 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: currentSlide === 0 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <ChevronLeft size={18} />
+                      Previous
+                    </button>
+                    
+                    <span style={{ fontSize: '14px', color: '#495057', fontWeight: '500' }}>
+                      {currentSlide === 0 ? 'Introduction' : `Question ${currentSlide}`} of {slides.length - 1}
+                    </span>
+                    
+                    <button
+                      onClick={nextSlide}
+                      disabled={currentSlide === slides.length - 1}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: currentSlide === slides.length - 1 ? '#e9ecef' : '#007bff',
+                        color: currentSlide === slides.length - 1 ? '#6c757d' : 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: currentSlide === slides.length - 1 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Next
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  
+                  {/* Question Dots Navigation */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => goToSlide(0)}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        border: currentSlide === 0 ? '2px solid #007bff' : '1px solid #dee2e6',
+                        backgroundColor: currentSlide === 0 ? '#007bff' : 'white',
+                        color: currentSlide === 0 ? 'white' : '#495057',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Introduction"
+                    >
+                      Intro
+                    </button>
+                    {slides.slice(1).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToSlide(index + 1)}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          border: currentSlide === index + 1 ? '2px solid #007bff' : '1px solid #dee2e6',
+                          backgroundColor: currentSlide === index + 1 ? '#007bff' : 'white',
+                          color: currentSlide === index + 1 ? 'white' : '#495057',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '600'
+                        }}
+                        title={`Question ${index + 1}`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Current Slide Content */}
+                <div className="tutorial-content" style={{ minHeight: '400px' }}>
+                  <div dangerouslySetInnerHTML={{ __html: slides[currentSlide] }} />
+                </div>
+
+                {/* Bottom Navigation */}
+                <div style={{
+                  marginTop: '30px',
+                  padding: '20px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <button
+                    onClick={prevSlide}
+                    disabled={currentSlide === 0}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: currentSlide === 0 ? '#e9ecef' : '#007bff',
+                      color: currentSlide === 0 ? '#6c757d' : 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: currentSlide === 0 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '15px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <ChevronLeft size={20} />
+                    Previous {currentSlide > 1 ? 'Question' : ''}
+                  </button>
+                  
+                  <span style={{ fontSize: '14px', color: '#6c757d' }}>
+                    {currentSlide === 0 ? 'Introduction' : `Question ${currentSlide} of ${slides.length - 1}`}
+                  </span>
+                  
+                  <button
+                    onClick={nextSlide}
+                    disabled={currentSlide === slides.length - 1}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: currentSlide === slides.length - 1 ? '#e9ecef' : '#007bff',
+                      color: currentSlide === slides.length - 1 ? '#6c757d' : 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: currentSlide === slides.length - 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '15px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Next {currentSlide < slides.length - 2 ? 'Question' : ''}
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="tutorial-content">
+                <div dangerouslySetInnerHTML={{ __html: tutorial.content }} />
+              </div>
+            )}
           </article>
         </main>
 
@@ -10000,634 +10243,6 @@ jobs:
 
         <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0;">
           <strong>📊 Key Concepts:</strong> Eventarc is a unified eventing platform that enables event-driven architectures by routing events from 100+ Google Cloud sources to serverless destinations like Cloud Run and Cloud Functions using the CloudEvents standard.
-        </div>
-
-        <h3>Question 1: What is Eventarc?</h3>
-        <p><strong>What is the primary purpose of Eventarc?</strong></p>
-        <ul>
-          <li>A) Database management</li>
-          <li>B) Unified event routing platform for event-driven architectures ✓</li>
-          <li>C) File storage service</li>
-          <li>D) Container orchestration</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Unified event routing platform for event-driven architectures</strong>
-          <p><strong>Explanation:</strong> Eventarc key features:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Unified eventing:</strong> Single interface for all GCP event sources</li>
-            <li><strong>100+ event sources:</strong> Cloud Storage, Pub/Sub, Audit Logs, custom sources</li>
-            <li><strong>CloudEvents standard:</strong> Vendor-neutral event format (CNCF)</li>
-            <li><strong>Serverless targets:</strong> Cloud Run, Cloud Functions, Workflows</li>
-            <li><strong>Event filtering:</strong> Route events based on attributes</li>
-            <li><strong>Delivery guarantees:</strong> At-least-once delivery with retries</li>
-            <li><strong>Event transformation:</strong> Modify events before delivery</li>
-          </ul>
-          <p><strong>Use cases:</strong> Reactive data processing, workflow automation, integration, real-time analytics.</p>
-        </div>
-
-        <h3>Question 2: CloudEvents Format</h3>
-        <p><strong>What is CloudEvents and why does Eventarc use it?</strong></p>
-        <ul>
-          <li>A) A proprietary Google format</li>
-          <li>B) An open standard for describing events in a common format ✓</li>
-          <li>C) A database schema</li>
-          <li>D) A compression algorithm</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) An open standard for describing events in a common format</strong>
-          <p><strong>Explanation:</strong> CloudEvents benefits:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Open standard:</strong> CNCF specification for event interoperability</li>
-            <li><strong>Consistent format:</strong> Same structure across all event sources</li>
-            <li><strong>Portability:</strong> Events work across clouds and platforms</li>
-            <li><strong>Metadata:</strong> Standard attributes (type, source, id, time)</li>
-            <li><strong>Content types:</strong> Support for JSON, binary, text data</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># CloudEvents format example (HTTP headers)
-Content-Type: application/json
-ce-specversion: 1.0
-ce-type: google.cloud.storage.object.v1.finalized
-ce-source: //storage.googleapis.com/buckets/my-bucket
-ce-id: aaaaaa-1111-bbbb-2222-cccccccccccc
-ce-time: 2024-11-16T10:30:00Z
-ce-subject: objects/file.txt
-
-# Event data (body)
-{
-  "bucket": "my-bucket",
-  "name": "file.txt",
-  "size": 1024,
-  "contentType": "text/plain",
-  "timeCreated": "2024-11-16T10:30:00Z"
-}
-
-# Access in Cloud Run (Python)
-def handle_event(request):
-    # CloudEvents headers
-    event_type = request.headers.get('ce-type')
-    event_source = request.headers.get('ce-source')
-    event_id = request.headers.get('ce-id')
-    
-    # Event data
-    event_data = request.get_json()
-    
-    print(f"Event: {event_type} from {event_source}")
-    return "OK", 200</pre>
-        </div>
-
-        <h3>Question 3: Event Sources</h3>
-        <p><strong>What types of event sources does Eventarc support?</strong></p>
-        <ul>
-          <li>A) Only Cloud Storage</li>
-          <li>B) Cloud Audit Logs, Cloud Storage, Pub/Sub, direct events, and 100+ sources ✓</li>
-          <li>C) Only manual triggers</li>
-          <li>D) Only database events</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Cloud Audit Logs, Cloud Storage, Pub/Sub, direct events, and 100+ sources</strong>
-          <p><strong>Explanation:</strong> Eventarc event sources:</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-            <thead>
-              <tr style="background-color: #f5f5f5;">
-                <th style="border: 1px solid #ddd; padding: 8px;">Source Type</th>
-                <th style="border: 1px solid #ddd; padding: 8px;">Description</th>
-                <th style="border: 1px solid #ddd; padding: 8px;">Example Events</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Cloud Storage</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Object lifecycle events</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">finalized, deleted, archived</td>
-              </tr>
-              <tr style="background-color: #f9f9f9;">
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Pub/Sub</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Message publishing</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Topic messages</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Cloud Audit Logs</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Admin, data, system events</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Resource creation, API calls</td>
-              </tr>
-              <tr style="background-color: #f9f9f9;">
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Direct Events</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Custom application events</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">User actions, workflows</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>100+ Services</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">BigQuery, Firestore, etc.</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Job completion, document changes</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Question 4: Creating Triggers</h3>
-        <p><strong>How do you create an Eventarc trigger?</strong></p>
-        <ul>
-          <li>A) Only through Cloud Console</li>
-          <li>B) Using gcloud CLI, Console, Terraform, or client libraries ✓</li>
-          <li>C) Email requests</li>
-          <li>D) Triggers are automatic</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Using gcloud CLI, Console, Terraform, or client libraries</strong>
-          <p><strong>Explanation:</strong> Trigger creation methods:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Event type:</strong> Specify the CloudEvents type to listen for</li>
-            <li><strong>Event source:</strong> Filter by source (e.g., specific bucket)</li>
-            <li><strong>Destination:</strong> Cloud Run service or Cloud Function</li>
-            <li><strong>Service account:</strong> Identity for invoking destination</li>
-            <li><strong>Filters:</strong> Additional attribute-based filtering</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Cloud Storage trigger
-gcloud eventarc triggers create storage-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=my-service \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=my-bucket" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Audit Log trigger (BigQuery job completion)
-gcloud eventarc triggers create bq-job-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=bq-processor \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.audit.log.v1.written" \\
-    --event-filters="serviceName=bigquery.googleapis.com" \\
-    --event-filters="methodName=jobservice.jobcompleted" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Pub/Sub trigger
-gcloud eventarc triggers create pubsub-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=subscriber \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.pubsub.topic.v1.messagePublished" \\
-    --transport-topic=projects/PROJECT/topics/my-topic</pre>
-        </div>
-
-        <h3>Question 5: Event Filtering</h3>
-        <p><strong>How can you filter which events trigger your service?</strong></p>
-        <ul>
-          <li>A) Filtering is not supported</li>
-          <li>B) Use event-filters flag to match CloudEvents attributes ✓</li>
-          <li>C) Only regex patterns</li>
-          <li>D) Manual filtering only</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Use event-filters flag to match CloudEvents attributes</strong>
-          <p><strong>Explanation:</strong> Event filtering capabilities:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Attribute matching:</strong> Filter on type, source, subject, etc.</li>
-            <li><strong>Multiple filters:</strong> Combine filters with AND logic</li>
-            <li><strong>Exact match:</strong> Currently supports exact string matching</li>
-            <li><strong>Path expressions:</strong> Filter on nested data attributes</li>
-            <li><strong>Reduce costs:</strong> Only invoke service for relevant events</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Filter by file type in Cloud Storage
-gcloud eventarc triggers create image-upload \\
-    --location=us-central1 \\
-    --destination-run-service=image-processor \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=uploads" \\
-    --event-filters-path-pattern="subject=/objects/*.jpg"
-
-# Filter audit logs by resource type
-gcloud eventarc triggers create vm-create \\
-    --location=us-central1 \\
-    --destination-run-service=vm-notifier \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.audit.log.v1.written" \\
-    --event-filters="serviceName=compute.googleapis.com" \\
-    --event-filters="methodName=v1.compute.instances.insert" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Additional filtering in code
-def handle_event(request):
-    event_data = request.get_json()
-    
-    # Additional application-level filtering
-    if event_data.get('size', 0) < 1000000:  # < 1MB
-        return "Skipped small file", 200
-    
-    # Process large files
-    process_file(event_data)
-    return "OK", 200</pre>
-        </div>
-
-        <h3>Question 6: Direct Events</h3>
-        <p><strong>What are direct events in Eventarc?</strong></p>
-        <ul>
-          <li>A) Only system-generated events</li>
-          <li>B) Custom events published directly to Eventarc from your applications ✓</li>
-          <li>C) Events from external clouds</li>
-          <li>D) Scheduled events</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Custom events published directly to Eventarc from your applications</strong>
-          <p><strong>Explanation:</strong> Direct events features:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Custom events:</strong> Publish application-specific events</li>
-            <li><strong>Direct publish:</strong> Send events directly to Eventarc channels</li>
-            <li><strong>No Pub/Sub needed:</strong> Simpler than creating topics</li>
-            <li><strong>CloudEvents format:</strong> Must conform to CloudEvents spec</li>
-            <li><strong>HTTP POST:</strong> Publish via REST API</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Create Eventarc channel for direct events
-gcloud eventarc channels create my-channel \\
-    --location=us-central1
-
-# Create trigger for direct events
-gcloud eventarc triggers create custom-event-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=event-handler \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=com.myapp.order.created" \\
-    --channel=my-channel \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Publish direct event (Python)
-import requests
-import json
-from datetime import datetime
-
-def publish_order_event(order_id, customer_id):
-    channel_url = "https://eventarcpublishing-us-central1.googleapis.com/v1/projects/PROJECT/locations/us-central1/channels/my-channel:publishEvents"
-    
-    event = {
-        "specversion": "1.0",
-        "type": "com.myapp.order.created",
-        "source": "//myapp.example.com/orders",
-        "id": f"order-{order_id}",
-        "time": datetime.utcnow().isoformat() + "Z",
-        "datacontenttype": "application/json",
-        "data": {
-            "orderId": order_id,
-            "customerId": customer_id,
-            "amount": 99.99
-        }
-    }
-    
-    response = requests.post(
-        channel_url,
-        json=event,
-        headers={"Authorization": f"Bearer {get_access_token()}"}
-    )
-    
-    return response.status_code == 200</pre>
-        </div>
-
-        <h3>Question 7: Delivery Guarantees</h3>
-        <p><strong>What delivery guarantees does Eventarc provide?</strong></p>
-        <ul>
-          <li>A) Exactly-once delivery</li>
-          <li>B) At-least-once delivery with automatic retries ✓</li>
-          <li>C) No delivery guarantees</li>
-          <li>D) At-most-once delivery</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) At-least-once delivery with automatic retries</strong>
-          <p><strong>Explanation:</strong> Event delivery features:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>At-least-once:</strong> Events delivered at least once (may duplicate)</li>
-            <li><strong>Automatic retries:</strong> Retry failed deliveries with exponential backoff</li>
-            <li><strong>Retry duration:</strong> Up to 24 hours by default</li>
-            <li><strong>Dead letter queue:</strong> Send failed events to Pub/Sub topic</li>
-            <li><strong>Idempotency required:</strong> Handlers must handle duplicates</li>
-            <li><strong>200 OK response:</strong> Acknowledge successful processing</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Configure retry policy and dead letter queue
-gcloud eventarc triggers create resilient-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=my-service \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=my-bucket" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Idempotent event handler (Python)
-import hashlib
-from google.cloud import firestore
-
-db = firestore.Client()
-
-def handle_event(request):
-    event_id = request.headers.get('ce-id')
-    event_data = request.get_json()
-    
-    # Check if already processed (idempotency)
-    doc_ref = db.collection('processed_events').document(event_id)
-    if doc_ref.get().exists:
-        print(f"Event {event_id} already processed")
-        return "OK", 200
-    
-    try:
-        # Process event
-        result = process_event(event_data)
-        
-        # Mark as processed
-        doc_ref.set({
-            'processed_at': firestore.SERVER_TIMESTAMP,
-            'result': result
-        })
-        
-        return "OK", 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Error", 500  # Will trigger retry</pre>
-        </div>
-
-        <h3>Question 8: Eventarc vs Pub/Sub</h3>
-        <p><strong>When should you use Eventarc instead of Pub/Sub directly?</strong></p>
-        <ul>
-          <li>A) Never, always use Pub/Sub</li>
-          <li>B) For unified event routing from multiple sources with CloudEvents format ✓</li>
-          <li>C) Only for small projects</li>
-          <li>D) They are identical</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) For unified event routing from multiple sources with CloudEvents format</strong>
-          <p><strong>Explanation:</strong> Eventarc vs Pub/Sub comparison:</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-            <thead>
-              <tr style="background-color: #f5f5f5;">
-                <th style="border: 1px solid #ddd; padding: 8px;">Aspect</th>
-                <th style="border: 1px solid #ddd; padding: 8px;">Eventarc</th>
-                <th style="border: 1px solid #ddd; padding: 8px;">Pub/Sub</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Purpose</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Event routing from many sources</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Async messaging</td>
-              </tr>
-              <tr style="background-color: #f9f9f9;">
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Format</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">CloudEvents standard</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Any message format</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Sources</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">100+ GCP services</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Custom publishers</td>
-              </tr>
-              <tr style="background-color: #f9f9f9;">
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Filtering</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Attribute-based</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Subscriptions only</td>
-              </tr>
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Setup</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Simplified (built-in sources)</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Manual topic/sub creation</td>
-              </tr>
-              <tr style="background-color: #f9f9f9;">
-                <td style="border: 1px solid #ddd; padding: 8px;"><strong>Best For</strong></td>
-                <td style="border: 1px solid #ddd; padding: 8px;">Event-driven apps, integrations</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">App-to-app messaging, queues</td>
-              </tr>
-            </tbody>
-          </table>
-          <p><strong>Note:</strong> Eventarc uses Pub/Sub internally for transport.</p>
-        </div>
-
-        <h3>Question 9: Audit Log Events</h3>
-        <p><strong>How do you trigger on audit log events with Eventarc?</strong></p>
-        <ul>
-          <li>A) Not supported</li>
-          <li>B) Create trigger with type=google.cloud.audit.log.v1.written and filter by service/method ✓</li>
-          <li>C) Only manual monitoring</li>
-          <li>D) Requires third-party tools</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Create trigger with type=google.cloud.audit.log.v1.written and filter by service/method</strong>
-          <p><strong>Explanation:</strong> Audit log trigger setup:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Enable audit logs:</strong> Must enable for the service (Admin Activity enabled by default)</li>
-            <li><strong>Filter by service:</strong> serviceName (e.g., compute.googleapis.com)</li>
-            <li><strong>Filter by method:</strong> methodName (e.g., v1.compute.instances.insert)</li>
-            <li><strong>Filter by resource:</strong> resourceName for specific resources</li>
-            <li><strong>IAM permissions:</strong> Need logging.logEntries.list</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Trigger on BigQuery dataset creation
-gcloud eventarc triggers create bq-dataset-created \\
-    --location=us-central1 \\
-    --destination-run-service=dataset-initializer \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.audit.log.v1.written" \\
-    --event-filters="serviceName=bigquery.googleapis.com" \\
-    --event-filters="methodName=google.cloud.bigquery.v2.DatasetService.InsertDataset" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Trigger on Cloud Storage bucket deletion
-gcloud eventarc triggers create bucket-deleted \\
-    --location=us-central1 \\
-    --destination-run-service=bucket-cleanup \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.audit.log.v1.written" \\
-    --event-filters="serviceName=storage.googleapis.com" \\
-    --event-filters="methodName=storage.buckets.delete" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Handle audit log event
-def handle_audit_event(request):
-    event_data = request.get_json()
-    
-    # Audit log structure
-    log_entry = event_data.get('protoPayload', {})
-    principal = log_entry.get('authenticationInfo', {}).get('principalEmail')
-    resource = log_entry.get('resourceName')
-    
-    print(f"User {principal} performed action on {resource}")
-    return "OK", 200</pre>
-        </div>
-
-        <h3>Question 10: Service Account Permissions</h3>
-        <p><strong>What permissions does the Eventarc trigger service account need?</strong></p>
-        <ul>
-          <li>A) No special permissions</li>
-          <li>B) roles/run.invoker or roles/cloudfunctions.invoker to call the destination ✓</li>
-          <li>C) Full project owner</li>
-          <li>D) Only read permissions</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) roles/run.invoker or roles/cloudfunctions.invoker to call the destination</strong>
-          <p><strong>Explanation:</strong> Service account setup:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Trigger SA:</strong> Identity used to invoke destination service</li>
-            <li><strong>roles/run.invoker:</strong> For Cloud Run destinations</li>
-            <li><strong>roles/cloudfunctions.invoker:</strong> For Cloud Functions</li>
-            <li><strong>Additional permissions:</strong> May need eventarc.events.receiveAuditLogV1Written for audit logs</li>
-            <li><strong>Least privilege:</strong> Use dedicated SA, not default compute SA</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Create service account for trigger
-gcloud iam service-accounts create eventarc-trigger-sa \\
-    --display-name="Eventarc Trigger Service Account"
-
-# Grant invoker role to trigger SA
-gcloud run services add-iam-policy-binding my-service \\
-    --member="serviceAccount:eventarc-trigger-sa@PROJECT.iam.gserviceaccount.com" \\
-    --role="roles/run.invoker" \\
-    --region=us-central1
-
-# For audit log events, grant additional permission
-gcloud projects add-iam-policy-binding PROJECT \\
-    --member="serviceAccount:eventarc-trigger-sa@PROJECT.iam.gserviceaccount.com" \\
-    --role="roles/eventarc.eventReceiver"
-
-# Use in trigger
-gcloud eventarc triggers create my-trigger \\
-    --location=us-central1 \\
-    --destination-run-service=my-service \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=my-bucket" \\
-    --service-account=eventarc-trigger-sa@PROJECT.iam.gserviceaccount.com</pre>
-        </div>
-
-        <h3>Question 11: Multi-Region Events</h3>
-        <p><strong>How does Eventarc handle events from different regions?</strong></p>
-        <ul>
-          <li>A) Only single region supported</li>
-          <li>B) Triggers are regional; create triggers in each region or use global event sources ✓</li>
-          <li>C) Automatic global routing</li>
-          <li>D) Events cannot cross regions</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Triggers are regional; create triggers in each region or use global event sources</strong>
-          <p><strong>Explanation:</strong> Regional considerations:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Regional triggers:</strong> Eventarc triggers are created in specific regions</li>
-            <li><strong>Audit logs global:</strong> Audit log events available in all regions</li>
-            <li><strong>Cloud Storage regional:</strong> Bucket events stay in bucket region</li>
-            <li><strong>Cross-region latency:</strong> Consider network latency</li>
-            <li><strong>Multi-region strategy:</strong> Deploy triggers in each region for low latency</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Create triggers in multiple regions
-# Region 1: us-central1
-gcloud eventarc triggers create storage-us-central \\
-    --location=us-central1 \\
-    --destination-run-service=processor \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=bucket-us-central" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Region 2: europe-west1
-gcloud eventarc triggers create storage-eu-west \\
-    --location=europe-west1 \\
-    --destination-run-service=processor \\
-    --destination-run-region=europe-west1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=bucket-eu-west" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com
-
-# Global audit logs can trigger in any region
-gcloud eventarc triggers create global-audit \\
-    --location=us-central1 \\
-    --destination-run-service=audit-processor \\
-    --destination-run-region=us-central1 \\
-    --event-filters="type=google.cloud.audit.log.v1.written" \\
-    --event-filters="serviceName=compute.googleapis.com" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com</pre>
-        </div>
-
-        <h3>Question 12: Integration with Workflows</h3>
-        <p><strong>Can Eventarc trigger Cloud Workflows?</strong></p>
-        <ul>
-          <li>A) No, only Cloud Run and Functions</li>
-          <li>B) Yes, you can trigger Workflows for orchestrating complex event-driven processes ✓</li>
-          <li>C) Only with third-party tools</li>
-          <li>D) Workflows are deprecated</li>
-        </ul>
-        <div style="background-color: #f1f8f4; padding: 12px; margin: 10px 0; border-left: 3px solid #28a745;">
-          <strong>Answer: B) Yes, you can trigger Workflows for orchestrating complex event-driven processes</strong>
-          <p><strong>Explanation:</strong> Eventarc + Workflows integration:</p>
-          <ul style="margin-top: 8px;">
-            <li><strong>Workflow destination:</strong> Trigger workflows directly from events</li>
-            <li><strong>Orchestration:</strong> Complex multi-step processes</li>
-            <li><strong>Service calls:</strong> Call multiple APIs, services in sequence</li>
-            <li><strong>Error handling:</strong> Built-in retries and error handling</li>
-            <li><strong>State management:</strong> Maintain state across steps</li>
-          </ul>
-          <pre style="background-color: #fff; padding: 10px; border-left: 3px solid #007bff;"># Create workflow
-# workflow.yaml
-main:
-  params: [event]
-  steps:
-    - log_event:
-        call: sys.log
-        args:
-          text: Event received
-          severity: INFO
-    
-    - extract_data:
-        assign:
-          - bucket: event.data.bucket
-          - filename: event.data.name
-    
-    - process_file:
-        call: http.post
-        args:
-          url: https://api.example.com/process
-          body:
-            bucket: bucket
-            file: filename
-        result: process_result
-    
-    - return_result:
-        return: process_result
-
-# Deploy workflow
-gcloud workflows deploy file-processor \\
-    --source=workflow.yaml \\
-    --location=us-central1
-
-# Create Eventarc trigger for workflow
-gcloud eventarc triggers create storage-to-workflow \\
-    --location=us-central1 \\
-    --destination-workflow=file-processor \\
-    --destination-workflow-location=us-central1 \\
-    --event-filters="type=google.cloud.storage.object.v1.finalized" \\
-    --event-filters="bucket=uploads" \\
-    --service-account=trigger-sa@project.iam.gserviceaccount.com</pre>
-        </div>
-
-        <h3>Eventarc Best Practices</h3>
-        <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;">
-          <strong>✅ Development Best Practices:</strong>
-          <ul style="margin-top: 10px;">
-            <li><strong>Idempotent handlers:</strong> Handle duplicate events gracefully</li>
-            <li><strong>Fast responses:</strong> Return 200 OK quickly, process async if needed</li>
-            <li><strong>CloudEvents standard:</strong> Parse CloudEvents headers and body</li>
-            <li><strong>Error handling:</strong> Return 500 for retries, 200 for non-retryable errors</li>
-            <li><strong>Event filtering:</strong> Use filters to reduce unnecessary invocations</li>
-            <li><strong>Structured logging:</strong> Log event metadata for debugging</li>
-            <li><strong>Monitoring:</strong> Track event delivery, latency, error rates</li>
-            <li><strong>Service accounts:</strong> Use dedicated SAs with least privilege</li>
-          </ul>
-        </div>
-
-        <div style="background-color: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 20px 0;">
-          <strong>💰 Cost Optimization:</strong>
-          <ul style="margin-top: 10px;">
-            <li><strong>Event filtering:</strong> Filter early to avoid invoking for irrelevant events</li>
-            <li><strong>Batch processing:</strong> Accumulate events before processing</li>
-            <li><strong>Efficient handlers:</strong> Optimize destination service for quick processing</li>
-            <li><strong>Scale to zero:</strong> Let Cloud Run scale down when idle</li>
-            <li><strong>Direct events:</strong> Use channels instead of Pub/Sub for custom events</li>
-            <li><strong>Right-size resources:</strong> Match CPU/memory to event processing needs</li>
-          </ul>
-        </div>
-
-        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
-          <strong>💡 Key Takeaway:</strong> Eventarc provides <strong>unified event routing</strong> from <strong>100+ Google Cloud sources</strong> to serverless destinations using the <strong>CloudEvents standard</strong>. Create <strong>triggers</strong> to route events from Cloud Storage, Pub/Sub, Audit Logs, or custom sources to <strong>Cloud Run, Cloud Functions, or Workflows</strong>. Use <strong>event filtering</strong> to process only relevant events, implement <strong>idempotent handlers</strong> for at-least-once delivery, and leverage <strong>direct events</strong> for custom application events. Configure <strong>service accounts</strong> with appropriate permissions, monitor with <strong>Cloud Logging</strong>, and design for <strong>regional deployments</strong>. Choose Eventarc for <strong>event-driven architectures</strong> requiring integration across multiple GCP services with standardized event handling.
         </div>
       `,
     },
